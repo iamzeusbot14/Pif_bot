@@ -4,12 +4,13 @@ import json
 import zipfile
 import requests
 from io import BytesIO
+from datetime import datetime
 
 PIF_DIR = './pif_library'
 DB_FILE = './used_fingerprints.txt'
 SOURCE_REPO = "Pixel-Props/build.prop"
 
-# Keywords to prioritize Beta/Dev builds
+# Target Beta/Dev builds specifically
 BETA_KEYWORDS = ["beta", "dev", "test-keys", "experimental", "tokay_beta"]
 
 SCHEMA = {
@@ -34,16 +35,16 @@ def extract_value(data, patterns):
     return ""
 
 def run():
-    # Ensure directories and database file exist
     if not os.path.exists(PIF_DIR): os.makedirs(PIF_DIR)
     if not os.path.exists(DB_FILE): 
         with open(DB_FILE, 'w') as f: f.write("")
 
-    # Load existing database into memory
     with open(DB_FILE, 'r') as f:
         used_fps = {line.strip() for line in f if line.strip()}
 
-    print(f"🛰️ Scanning Google Repo. Known fingerprints: {len(used_fps)}")
+    # Get current month and year (e.g., "2026-04")
+    current_month_prefix = datetime.now().strftime("%Y-%m")
+    print(f"🛰️ Scanning for Beta builds with Security Patch: {current_month_prefix}")
     
     api_url = f"https://api.github.com/repos/{SOURCE_REPO}/releases/latest"
     try:
@@ -64,9 +65,13 @@ def run():
                             content_pool += f.read().decode('utf-8', errors='ignore') + "\n"
 
                 fp = extract_value(content_pool, SCHEMA["FINGERPRINT"])
+                patch = extract_value(content_pool, SCHEMA["SECURITY_PATCH"])
+                
+                # Logic: Must be Beta AND match the current month's patch
                 is_beta = any(word in fp.lower() or word in asset['name'].lower() for word in BETA_KEYWORDS)
+                is_current = patch.startswith(current_month_prefix)
 
-                if fp and is_beta and fp not in used_fps:
+                if fp and is_beta and is_current and fp not in used_fps:
                     api = extract_value(content_pool, SCHEMA["API_LEVEL"])
                     sdk_val = int(api) if api.isdigit() else 25
                     
@@ -80,27 +85,25 @@ def run():
                         "ID": extract_value(content_pool, SCHEMA["ID"]),
                         "TYPE": extract_value(content_pool, SCHEMA["TYPE"]) or "user",
                         "TAGS": extract_value(content_pool, SCHEMA["TAGS"]) or "release-keys",
-                        "VERSION:SECURITY_PATCH": extract_value(content_pool, SCHEMA["SECURITY_PATCH"]),
+                        "VERSION:SECURITY_PATCH": patch,
                         "VERSION:API_LEVEL": sdk_val,
                         "VERSION:SDK_LEVEL": sdk_val
                     }
 
-                    # Write JSON
                     file_path = os.path.join(PIF_DIR, asset['name'].replace('.zip', '.json'))
                     with open(file_path, 'w') as out:
                         json.dump(pif_data, out, indent=2)
                     
-                    # Update Database File Immediately
                     with open(DB_FILE, 'a') as db:
                         db.write(fp + "\n")
                     
                     used_fps.add(fp)
-                    print(f"✅ New Beta Saved: {asset['name']} (SDK {sdk_val})")
+                    print(f"✅ Found {current_month_prefix} Beta: {asset['name']}")
                     new_count += 1
         except Exception as e:
-            print(f"Error processing {asset['name']}: {e}")
+            print(f"Skipped {asset['name']}: {e}")
 
-    print(f"🏁 Done. Added {new_count} fingerprints to the database.")
+    print(f"🏁 Finished. Added {new_count} fingerprints from the current month.")
 
 if __name__ == "__main__":
     run()
