@@ -1,13 +1,9 @@
-name: PIF Professional Automation (Node 24)
+name: PIF Python Sync (No Deprecations)
 
 on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
-
-env:
-  # Opt-in to Node 24 early to clear deprecation warnings
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   pif-sync:
@@ -16,25 +12,21 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          fetch-depth: 0
+          python-version: '3.11'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24' # Explicitly using Node 24
+      - name: Install Requests
+        run: pip install requests
 
-      - name: Install Dependencies
-        run: npm install adm-zip
+      - name: Run Python Scraper
+        run: python process_pif.py
 
-      - name: Run Processor
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: node process_pif.js
-
-      - name: Send to Telegram
+      - name: Dispatch Telegram
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -42,11 +34,12 @@ jobs:
           LATEST=$(ls -t pif_library/*.json 2>/dev/null | head -n 1)
           if [ ! -z "$LATEST" ]; then
             FNAME=$(basename "$LATEST")
-            CAPTION="💎 *Pro PIF Sync (Node 24)*%0A*Model:* ${FNAME%.json}%0A*Status:* Verified"
-            curl -s -F document=@"$LATEST" -F chat_id="${CHAT_ID}" -F caption="${CAPTION}" -F parse_mode="Markdown" "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
+            curl -s -F document=@"$LATEST" -F chat_id="${CHAT_ID}" \
+                 -F caption="🐍 *PIF Generated via Python*%0A*Model:* ${FNAME%.json}" \
+                 -F parse_mode="Markdown" "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
           fi
 
-      - name: Git Push Update
+      - name: Git Push
         run: |
           git config --local user.email "iamdrzeus14@gmail.com"
           git config --local user.name "Z E U S"
@@ -55,9 +48,9 @@ jobs:
           git add pif_library/ used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            git commit -m "chore: sync pif library Node24 [skip ci]"
+            git commit -m "chore: python-powered pif sync [skip ci]"
             git push
           else
-            echo "No new profiles found."
+            echo "No changes detected."
           fi
           
