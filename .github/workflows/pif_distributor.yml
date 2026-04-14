@@ -1,4 +1,4 @@
-name: PIF Predator Sync (Z E U S B O T)
+name: PIF Organized Sync (Z E U S B O T)
 
 on:
   schedule:
@@ -12,7 +12,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -20,23 +20,24 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Install Requests
         run: pip install requests
 
-      - name: Run Dual-Pass Scraper
+      - name: Run Organized Scraper
         run: python process_pif.py
 
       - name: Git Push & Sync
         run: |
+          # Z E U S B O T Professional Config
           git config --local user.email "iamdrzeus14@gmail.com"
           git config --local user.name "Z E U S B O T"
           
-          mkdir -p pif_library
-          git add pif_library/*.json used_fingerprints.txt
+          # Stage the directory and the tracking file
+          git add pif_library/ used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            git commit -s -m "chore(pif): predatory deep sync [skip ci]"
+            git commit -s -m "chore(pif): organized sync of beta and released properties [skip ci]"
             git push
           else
-            echo "All fingerprints (Beta & Release) are already in database."
+            echo "Everything is already sorted and up to date."
           fi
