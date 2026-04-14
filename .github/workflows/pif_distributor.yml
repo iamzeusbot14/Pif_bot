@@ -1,4 +1,4 @@
-name: PIF Beta Sync (Z E U S B O T)
+name: PIF Monthly Beta Sync (Z E U S B O T)
 
 on:
   schedule:
@@ -20,28 +20,27 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Install Requests
         run: pip install requests
 
-      - name: Run Beta Scraper
+      - name: Run Monthly Scraper
         run: python process_pif.py
 
-      - name: Git Push & Database Sync
+      - name: Git Push & Sync
         run: |
-          # Identity Config
+          # Professional Identity
           git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
           
-          # Force create tracking file if missing
+          mkdir -p pif_library
           touch used_fingerprints.txt
           
-          # Stage both the new JSONs and the updated database
           git add pif_library/*.json used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            # Signed-off by Z E U S B O T
-            git commit -s -m "chore(pif): sync certified beta properties and update db [skip ci]"
+            # Commit with -s for mandatory sign-off
+            git commit -s -m "chore(pif): sync certified beta properties for $(date +'%B %Y') [skip ci]"
             git push
           else
-            echo "Database is already up to date. No new fingerprints found."
+            echo "No new beta fingerprints found for this month."
           fi
