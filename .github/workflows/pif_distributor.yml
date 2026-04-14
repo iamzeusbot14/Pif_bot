@@ -1,4 +1,4 @@
-name: PIF Python Sync (No Deprecations)
+name: PIF Python Sync (Z E U S B O T)
 
 on:
   schedule:
@@ -26,31 +26,41 @@ jobs:
       - name: Run Python Scraper
         run: python process_pif.py
 
+      - name: Debug Output
+        run: |
+          echo "Files in pif_library:"
+          ls -R pif_library/
+
       - name: Dispatch Telegram
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          # Find the newest JSON file created in this session
           LATEST=$(ls -t pif_library/*.json 2>/dev/null | head -n 1)
-          if [ ! -z "$LATEST" ]; then
+          if [ -n "$LATEST" ]; then
             FNAME=$(basename "$LATEST")
-            curl -s -F document=@"$LATEST" -F chat_id="${CHAT_ID}" \
-                 -F caption="🐍 *PIF Generated via Python*%0A*Model:* ${FNAME%.json}" \
-                 -F parse_mode="Markdown" "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
+            echo "Sending $FNAME to Telegram..."
+            curl -s -F document=@"$LATEST" \
+                 -F chat_id="${CHAT_ID}" \
+                 -F caption="🐍 *PIF Generated*%0A*Profile:* ${FNAME%.json}%0A*Sign-off:* Z E U S B O T" \
+                 -F parse_mode="Markdown" \
+                 "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
+          else
+            echo "No new JSON files found to send."
           fi
 
       - name: Git Push
         run: |
-          git config --local user.email "iamdrzeus14@gmail.com"
-          git config --local user.name "Z E U S"
+          git config --local user.email "zeusbot@atomicmail.io"
+          git config --local user.name "Z E U S B O T"
           
           mkdir -p pif_library
           git add pif_library/ used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            git commit -m "chore: python-powered pif sync [skip ci]"
+            git commit -s -m "chore(pif): sync certified properties [skip ci]"
             git push
           else
             echo "No changes detected."
           fi
-          
