@@ -7,10 +7,9 @@ const PIF_DIR = './pif_library';
 const DB_FILE = './used_fingerprints.txt';
 const TEMP_ZIPS = './temp_zips';
 
-// Priority keys for Google Play Integrity certification
 const SCHEMA = {
-    PRODUCT: [/ro\.product\.name=/m, /ro\.product\.system\.name=/m, /ro\.product\.vendor\.name=/m],
-    DEVICE: [/ro\.product\.device=/m, /ro\.product\.system\.device=/m, /ro\.product\.vendor\.device=/m],
+    PRODUCT: [/ro\.product\.name=/m, /ro\.product\.system\.name=/m],
+    DEVICE: [/ro\.product\.device=/m, /ro\.product\.system\.device=/m],
     MANUFACTURER: [/ro\.product\.manufacturer=/m, /ro\.product\.system\.manufacturer=/m],
     BRAND: [/ro\.product\.brand=/m, /ro\.product\.system\.brand=/m],
     MODEL: [/ro\.product\.model=/m, /ro\.product\.system\.model=/m],
@@ -37,20 +36,18 @@ async function run() {
 
     const used = fs.existsSync(DB_FILE) ? fs.readFileSync(DB_FILE, 'utf8') : "";
 
-    console.log("🚀 Scanning Pixel-Props for Google Certified Build Props...");
+    console.log("🚀 Running Deep Scan for Google Certified Props...");
     try {
         execSync(`gh release download --repo Pixel-Props/build.prop --pattern "*.zip" --dest ${TEMP_ZIPS}`);
-    } catch (e) { console.log("No new releases found."); }
+    } catch (e) { console.log("No new updates available."); }
 
     const zips = fs.readdirSync(TEMP_ZIPS).filter(f => f.endsWith('.zip'));
-    let count = 0;
-
+    
     for (const file of zips) {
         try {
             const zip = new AdmZip(path.join(TEMP_ZIPS, file));
             let blob = "";
             zip.getEntries().forEach(e => {
-                // Aggregates data from any prop file found in the module
                 if (e.entryName.endsWith('.prop') || e.entryName.includes('build.prop')) {
                     blob += e.getData().toString('utf8') + "\n";
                 }
@@ -67,18 +64,16 @@ async function run() {
                     MODEL: extract(blob, SCHEMA.MODEL),
                     FINGERPRINT: fp,
                     SECURITY_PATCH: extract(blob, SCHEMA.SECURITY_PATCH),
-                    FIRST_API_LEVEL: "25", // Forces Basic Attestation bypass
+                    FIRST_API_LEVEL: "25",
                     ID: extract(blob, SCHEMA.ID),
                     VERSION: extract(blob, SCHEMA.VERSION)
                 };
 
-                const name = file.replace('.zip', '.json');
-                fs.writeFileSync(path.join(PIF_DIR, name), JSON.stringify(pif, null, 2));
+                fs.writeFileSync(path.join(PIF_DIR, file.replace('.zip', '.json')), JSON.stringify(pif, null, 2));
                 fs.appendFileSync(DB_FILE, fp + "\n");
-                console.log(`✅ Extracted: ${name}`);
-                count++;
+                console.log(`✅ Extracted: ${file}`);
             }
-        } catch (err) { console.log(`Skipped ${file}: Corrupt zip or missing props.`); }
+        } catch (err) { console.log(`Skipped ${file}`); }
     }
     fs.rmSync(TEMP_ZIPS, { recursive: true, force: true });
 }
