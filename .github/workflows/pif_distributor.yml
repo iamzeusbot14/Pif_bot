@@ -1,0 +1,56 @@
+name: PIF Rotation & Telegram Bot
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  rotate-pif:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to update the used_fingerprints.txt
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Processing Script
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x process_pif.sh
+          ./process_pif.sh
+
+      - name: Send Newest PIF to Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # Pick the most recently created JSON in the library
+          LATEST_JSON=$(ls -t pif_library/*.json | head -n 1)
+          
+          if [ -z "$LATEST_JSON" ]; then
+            echo "No new fingerprints found today."
+            exit 0
+          fi
+
+          FILE_NAME=$(basename "$LATEST_JSON")
+          
+          curl -v -F document=@"$LATEST_JSON" \
+               -F chat_id="${CHAT_ID}" \
+               -F caption="🛡️ **New PIF Profile Generated**
+               
+Device: ${FILE_NAME%.json}
+Status: Unique / Unused in DB" \
+               -F parse_mode="Markdown" \
+               https://api.telegram.org/bot${BOT_TOKEN}/sendDocument
+
+      - name: Update Used Fingerprints Database
+        run: |
+          git config --local user.email "zeusbot@atomicmail.io"
+          git config --local user.name "Z E U S B O T"
+          git add used_fingerprints.txt
+          git commit -m "Update used fingerprints database [skip ci]" || echo "No changes to commit"
+          git push
+          
