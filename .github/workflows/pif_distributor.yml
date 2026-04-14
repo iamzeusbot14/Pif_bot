@@ -12,7 +12,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -20,35 +20,28 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Requests
+      - name: Install Dependencies
         run: pip install requests
 
       - name: Run Beta Scraper
         run: python process_pif.py
 
-      - name: Dispatch Telegram
-        env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: Git Push & Database Sync
         run: |
-          FILES=$(find pif_library -name "*.json" -mmin -10)
-          for file in $FILES; do
-            curl -s -F document=@"$file" \
-                 -F chat_id="${CHAT_ID}" \
-                 -F caption="🧪 *Certified Beta PIF Generated*%0A*Identity:* Z E U S B O T" \
-                 -F parse_mode="Markdown" \
-                 "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
-          done
-
-      - name: Git Push
-        run: |
+          # Identity Config
           git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
-          mkdir -p pif_library
-          git add pif_library/ used_fingerprints.txt
+          
+          # Force create tracking file if missing
+          touch used_fingerprints.txt
+          
+          # Stage both the new JSONs and the updated database
+          git add pif_library/*.json used_fingerprints.txt
+          
           if ! git diff --staged --quiet; then
-            git commit -s -m "chore(pif): sync beta properties [skip ci]"
+            # Signed-off by Z E U S B O T
+            git commit -s -m "chore(pif): sync certified beta properties and update db [skip ci]"
             git push
           else
-            echo "No changes detected."
+            echo "Database is already up to date. No new fingerprints found."
           fi
