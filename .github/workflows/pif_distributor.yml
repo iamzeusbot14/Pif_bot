@@ -1,4 +1,4 @@
-name: PIF Monthly Beta Sync (Z E U S B O T)
+name: PIF Advanced Beta Sync (Z E U S B O T)
 
 on:
   schedule:
@@ -20,27 +20,25 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Requests
+      - name: Install Dependencies
         run: pip install requests
 
-      - name: Run Monthly Scraper
+      - name: Run Deep Multi-Threaded Scraper
         run: python process_pif.py
 
-      - name: Git Push & Sync
+      - name: Git Push & Database Sync
         run: |
-          # Professional Identity
+          # Z E U S B O T Professional Identity
           git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
           
           mkdir -p pif_library
-          touch used_fingerprints.txt
-          
           git add pif_library/*.json used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            # Commit with -s for mandatory sign-off
-            git commit -s -m "chore(pif): sync certified beta properties for $(date +'%B %Y') [skip ci]"
+            # signed-off by Z E U S B O T
+            git commit -s -m "chore(pif): deep-sync certified beta/qpr properties [skip ci]"
             git push
           else
-            echo "No new beta fingerprints found for this month."
+            echo "No new unburned properties found."
           fi
