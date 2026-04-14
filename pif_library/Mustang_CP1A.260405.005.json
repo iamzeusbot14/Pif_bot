@@ -1,0 +1,12 @@
+{
+  "PRODUCT": "mustang",
+  "DEVICE": "mustang",
+  "MANUFACTURER": "Google",
+  "BRAND": "google",
+  "MODEL": "Pixel 10 Pro XL",
+  "FINGERPRINT": "google/mustang/mustang:16/CP1A.260405.005/15001963:user/release-keys",
+  "SECURITY_PATCH": "2026-04-05",
+  "FIRST_API_LEVEL": "25",
+  "ID": "CP1A.260405.005",
+  "VERSION": "16"
+}

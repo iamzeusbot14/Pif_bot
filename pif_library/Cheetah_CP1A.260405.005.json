@@ -1,0 +1,12 @@
+{
+  "PRODUCT": "cheetah",
+  "DEVICE": "cheetah",
+  "MANUFACTURER": "Google",
+  "BRAND": "google",
+  "MODEL": "Pixel 7 Pro",
+  "FINGERPRINT": "google/cheetah/cheetah:16/CP1A.260405.005/15001963:user/release-keys",
+  "SECURITY_PATCH": "2026-04-05",
+  "FIRST_API_LEVEL": "25",
+  "ID": "CP1A.260405.005",
+  "VERSION": "16"
+}
