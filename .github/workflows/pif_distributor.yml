@@ -1,4 +1,4 @@
-name: PIF Folder Sync & TG Bot
+name: PIF Professional Automation
 
 on:
   schedule:
@@ -6,55 +6,49 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync-pif-library:
+  pif-sync:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history for pushing
+          fetch-depth: 0
 
-      - name: Process and Generate JSONs
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Dependencies
+        run: npm install adm-zip
+
+      - name: Process
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          chmod +x process_pif.sh
-          ./process_pif.sh
+        run: node process_pif.js
 
-      - name: Send Newest Addition to Telegram
+      - name: Telegram Notification
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # Find the latest JSON based on file modification time
           LATEST=$(ls -t pif_library/*.json 2>/dev/null | head -n 1)
-          
           if [ ! -z "$LATEST" ]; then
             FNAME=$(basename "$LATEST")
-            CAPTION="📁 *New PIF Added to Library*%0A%0A*Device:* ${FNAME%.json}%0A*Stored:* /pif_library/${FNAME}"
-            
-            curl -F document=@"$LATEST" \
-                 -F chat_id="${CHAT_ID}" \
-                 -F caption="${CAPTION}" \
-                 -F parse_mode="Markdown" \
-                 "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
+            CAPTION="💎 *Pro PIF Extraction Successful*%0A%0A*Profile:* ${FNAME%.json}%0A*Storage:* /pif_library"
+            curl -F document=@"$LATEST" -F chat_id="${CHAT_ID}" -F caption="${CAPTION}" -F parse_mode="Markdown" "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
           fi
 
-      - name: Commit and Push All JSONs
+      - name: Git Push
         run: |
           git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
-          
-          # Add the library folder and the tracker
           git add pif_library/*.json used_fingerprints.txt
-          
-          # Only commit if new files were actually generated
-          if git diff --staged --quiet; then
-            echo "No new PIF files to upload."
-          else
-            git commit -m "Upload new separate PIF JSONs [skip ci]"
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: sync pif library [skip ci]"
             git push
           fi
+          
