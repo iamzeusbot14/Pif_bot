@@ -12,7 +12,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -20,40 +20,33 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Install Requests
         run: pip install requests
 
       - name: Run Beta Scraper
         run: python process_pif.py
 
-      - name: Dispatch to Telegram
+      - name: Dispatch Telegram
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # Detect all new JSON files generated in this run
           FILES=$(find pif_library -name "*.json" -mmin -10)
-          
           for file in $FILES; do
-            FNAME=$(basename "$file")
             curl -s -F document=@"$file" \
                  -F chat_id="${CHAT_ID}" \
-                 -F caption="🧪 *Certified Beta PIF*%0A*Profile:* ${FNAME%.json}%0A*By:* Z E U S B O T" \
+                 -F caption="🧪 *Certified Beta PIF Generated*%0A*Identity:* Z E U S B O T" \
                  -F parse_mode="Markdown" \
                  "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
           done
 
-      - name: Git Push with Sign-off
+      - name: Git Push
         run: |
-          # Apply Z E U S B O T Identity
           git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
-          
           mkdir -p pif_library
           git add pif_library/ used_fingerprints.txt
-          
           if ! git diff --staged --quiet; then
-            # Commit with -s for: Signed-off-by: Z E U S B O T <zeusbot@atomicmail.io>
             git commit -s -m "chore(pif): sync beta properties [skip ci]"
             git push
           else
