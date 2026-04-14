@@ -1,9 +1,13 @@
-name: PIF Professional Automation
+name: PIF Professional Automation (Node 24)
 
 on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+
+env:
+  # Opt-in to Node 24 early to clear deprecation warnings
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   pif-sync:
@@ -17,10 +21,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24' # Explicitly using Node 24
 
       - name: Install Dependencies
         run: npm install adm-zip
@@ -38,7 +42,7 @@ jobs:
           LATEST=$(ls -t pif_library/*.json 2>/dev/null | head -n 1)
           if [ ! -z "$LATEST" ]; then
             FNAME=$(basename "$LATEST")
-            CAPTION="💎 *New PIF Generated*%0A*Model:* ${FNAME%.json}%0A*Database:* Updated"
+            CAPTION="💎 *Pro PIF Sync (Node 24)*%0A*Model:* ${FNAME%.json}%0A*Status:* Verified"
             curl -s -F document=@"$LATEST" -F chat_id="${CHAT_ID}" -F caption="${CAPTION}" -F parse_mode="Markdown" "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
           fi
 
@@ -51,8 +55,9 @@ jobs:
           git add pif_library/ used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            git commit -m "chore: sync certified pif profiles [skip ci]"
+            git commit -m "chore: sync pif library Node24 [skip ci]"
             git push
           else
-            echo "No new PIF profiles found."
+            echo "No new profiles found."
           fi
+          
