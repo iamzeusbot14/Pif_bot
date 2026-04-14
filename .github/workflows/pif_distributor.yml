@@ -2,14 +2,14 @@ name: PIF Rotation & Telegram Bot
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs daily at midnight
-  workflow_dispatch: # Allows manual trigger
+    - cron: '0 0 * * *' # Automatically runs daily
+  workflow_dispatch: # Allows you to run it manually from the UI
 
 jobs:
   rotate-pif:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Needed to update the used_fingerprints.txt
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -27,30 +27,31 @@ jobs:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # Pick the most recently created JSON in the library
-          LATEST_JSON=$(ls -t pif_library/*.json | head -n 1)
+          # Find the newest JSON file created in this run
+          LATEST_JSON=$(ls -t pif_library/*.json 2>/dev/null | head -n 1)
           
           if [ -z "$LATEST_JSON" ]; then
-            echo "No new fingerprints found today."
+            echo "No new unique fingerprints found today."
             exit 0
           fi
 
           FILE_NAME=$(basename "$LATEST_JSON")
+          DEVICE_NAME="${FILE_NAME%.json}"
           
+          # Telegram-friendly caption with newlines
+          CAPTION="🛡️ *New PIF Profile Generated*%0A%0A*Device:* ${DEVICE_NAME}%0A*Status:* Unique Profile Extracted"
+
           curl -v -F document=@"$LATEST_JSON" \
                -F chat_id="${CHAT_ID}" \
-               -F caption="🛡️ **New PIF Profile Generated**
-               
-Device: ${FILE_NAME%.json}
-Status: Unique / Unused in DB" \
+               -F caption="${CAPTION}" \
                -F parse_mode="Markdown" \
-               https://api.telegram.org/bot${BOT_TOKEN}/sendDocument
+               "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
 
-      - name: Update Used Fingerprints Database
+      - name: Update Database
         run: |
           git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
           git add used_fingerprints.txt
-          git commit -m "Update used fingerprints database [skip ci]" || echo "No changes to commit"
-          git push
+          # Only commit if there are actually changes
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update PIF database [skip ci]" && git push)
           
