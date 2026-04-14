@@ -2,8 +2,8 @@ name: PIF Professional Automation
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs daily at midnight
-  workflow_dispatch: # Allows manual trigger
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   pif-sync:
@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -25,53 +25,34 @@ jobs:
       - name: Install Dependencies
         run: npm install adm-zip
 
-      - name: Process PIF Data
+      - name: Run Processor
         env:
           GH_TOKEN: ${{ github.token }}
         run: node process_pif.js
 
-      - name: Dispatch to Telegram
+      - name: Send to Telegram
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # Find the newest JSON file by modification time
           LATEST=$(ls -t pif_library/*.json 2>/dev/null | head -n 1)
-          
           if [ ! -z "$LATEST" ]; then
             FNAME=$(basename "$LATEST")
-            DEVICE_NAME="${FNAME%.json}"
-            
-            # Use URL-encoded newlines (%0A) for reliable Telegram delivery
-            CAPTION="🛡️ *New PIF Generated*%0A%0A*Device:* ${DEVICE_NAME}%0A*Status:* Unique Profile Added to Library"
-            
-            curl -s -F document=@"$LATEST" \
-                 -F chat_id="${CHAT_ID}" \
-                 -F caption="${CAPTION}" \
-                 -F parse_mode="Markdown" \
-                 "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
-          else
-            echo "No new unique fingerprints found today. Skipping Telegram."
+            CAPTION="💎 *New PIF Generated*%0A*Model:* ${FNAME%.json}%0A*Database:* Updated"
+            curl -s -F document=@"$LATEST" -F chat_id="${CHAT_ID}" -F caption="${CAPTION}" -F parse_mode="Markdown" "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
           fi
 
-      - name: Commit and Push Changes
+      - name: Git Push Update
         run: |
-          git config --local user.email "zeusbot@atomicmail.io"
-          git config --local user.name "Z E U S B O T"
+          git config --local user.email "iamdrzeus14@gmail.com"
+          git config --local user.name "Z E U S"
           
-          # Ensure the directory exists to avoid 'pathspec' errors
           mkdir -p pif_library
+          git add pif_library/ used_fingerprints.txt
           
-          # Add the directory and the database file
-          git add pif_library/
-          if [ -f "used_fingerprints.txt" ]; then
-            git add used_fingerprints.txt
-          fi
-          
-          # Only commit and push if there are staged changes
           if ! git diff --staged --quiet; then
-            git commit -m "chore: sync pif library [skip ci]"
+            git commit -m "chore: sync certified pif profiles [skip ci]"
             git push
           else
-            echo "No changes detected. Nothing to push."
+            echo "No new PIF profiles found."
           fi
