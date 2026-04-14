@@ -1,12 +1,12 @@
-name: PIF Rotation & Telegram Bot
+name: PIF Folder Sync & TG Bot
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Automatically runs daily
-  workflow_dispatch: # Allows you to run it manually from the UI
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
-  rotate-pif:
+  sync-pif-library:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -14,44 +14,47 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for pushing
 
-      - name: Run Processing Script
+      - name: Process and Generate JSONs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           chmod +x process_pif.sh
           ./process_pif.sh
 
-      - name: Send Newest PIF to Telegram
+      - name: Send Newest Addition to Telegram
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # Find the newest JSON file created in this run
-          LATEST_JSON=$(ls -t pif_library/*.json 2>/dev/null | head -n 1)
+          # Find the latest JSON based on file modification time
+          LATEST=$(ls -t pif_library/*.json 2>/dev/null | head -n 1)
           
-          if [ -z "$LATEST_JSON" ]; then
-            echo "No new unique fingerprints found today."
-            exit 0
+          if [ ! -z "$LATEST" ]; then
+            FNAME=$(basename "$LATEST")
+            CAPTION="📁 *New PIF Added to Library*%0A%0A*Device:* ${FNAME%.json}%0A*Stored:* /pif_library/${FNAME}"
+            
+            curl -F document=@"$LATEST" \
+                 -F chat_id="${CHAT_ID}" \
+                 -F caption="${CAPTION}" \
+                 -F parse_mode="Markdown" \
+                 "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
           fi
 
-          FILE_NAME=$(basename "$LATEST_JSON")
-          DEVICE_NAME="${FILE_NAME%.json}"
-          
-          # Telegram-friendly caption with newlines
-          CAPTION="🛡️ *New PIF Profile Generated*%0A%0A*Device:* ${DEVICE_NAME}%0A*Status:* Unique Profile Extracted"
-
-          curl -v -F document=@"$LATEST_JSON" \
-               -F chat_id="${CHAT_ID}" \
-               -F caption="${CAPTION}" \
-               -F parse_mode="Markdown" \
-               "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
-
-      - name: Update Database
+      - name: Commit and Push All JSONs
         run: |
           git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
-          git add used_fingerprints.txt
-          # Only commit if there are actually changes
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update PIF database [skip ci]" && git push)
           
+          # Add the library folder and the tracker
+          git add pif_library/*.json used_fingerprints.txt
+          
+          # Only commit if new files were actually generated
+          if git diff --staged --quiet; then
+            echo "No new PIF files to upload."
+          else
+            git commit -m "Upload new separate PIF JSONs [skip ci]"
+            git push
+          fi
