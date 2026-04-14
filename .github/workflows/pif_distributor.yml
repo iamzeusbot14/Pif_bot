@@ -1,8 +1,8 @@
-name: PIF Advanced Beta Sync (Z E U S B O T)
+name: PIF Bruteforce Sync (Z E U S B O T)
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 */4 * * *' # Check every 4 hours for new drops
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -20,25 +20,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Install Requests
         run: pip install requests
 
-      - name: Run Deep Multi-Threaded Scraper
+      - name: Run Bruteforce Scraper
         run: python process_pif.py
 
-      - name: Git Push & Database Sync
+      - name: Git Push & DB Sync
         run: |
-          # Z E U S B O T Professional Identity
           git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
           
-          mkdir -p pif_library
           git add pif_library/*.json used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            # signed-off by Z E U S B O T
-            git commit -s -m "chore(pif): deep-sync certified beta/qpr properties [skip ci]"
+            git commit -s -m "chore(pif): deep-sync all certified properties [skip ci]"
             git push
           else
-            echo "No new unburned properties found."
+            echo "No new properties found in history."
           fi
