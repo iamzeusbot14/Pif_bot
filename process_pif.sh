@@ -1,30 +1,33 @@
 #!/bin/bash
 
+# Create directories
 mkdir -p pif_library
 mkdir -p temp_zips
 
 # 1. Download latest props from Pixel-Props
+# Using the GitHub CLI (built into GH Actions runners)
 gh release download --repo Pixel-Props/build.prop --pattern "*.zip" --dest ./temp_zips
 
-# 2. Load the used fingerprints list (database)
+# 2. Ensure database exists
 touch used_fingerprints.txt
 
+# 3. Process each zip
 for zip in ./temp_zips/*.zip; do
     filename=$(basename "$zip" .zip)
     
-    # Extract system.prop content
+    # Extract system.prop to memory
     unzip -p "$zip" system.prop > temp.prop
     
     # Extract fingerprint to check against database
     FP=$(grep "ro.build.fingerprint=" temp.prop | cut -d'=' -f2)
     
-    # 3. Database Check: Skip if already used
-    if grep -q "$FP" used_fingerprints.txt; then
-        echo "Skipping $filename (already used)."
+    # Skip if we've already used this fingerprint
+    if grep -qx "$FP" used_fingerprints.txt; then
+        echo "⏭️ Skipping $filename: Fingerprint already in database."
         continue
     fi
 
-    # Extract other variables
+    # Extract required fields for Play Integrity Fix JSON
     MODEL=$(grep "ro.product.model=" temp.prop | cut -d'=' -f2)
     BRAND=$(grep "ro.product.brand=" temp.prop | cut -d'=' -f2)
     DEVICE=$(grep "ro.product.device=" temp.prop | cut -d'=' -f2)
@@ -32,7 +35,7 @@ for zip in ./temp_zips/*.zip; do
     ID=$(grep "ro.build.id=" temp.prop | cut -d'=' -f2)
     PATCH=$(grep "ro.build.version.security_patch=" temp.prop | cut -d'=' -f2)
 
-    # 4. Generate individual JSON
+    # 4. Generate the individual JSON file
     cat <<EOF > "pif_library/${filename}.json"
 {
   "PRODUCT": "$DEVICE",
@@ -47,8 +50,10 @@ for zip in ./temp_zips/*.zip; do
   "VERSION": "$RELEASE"
 }
 EOF
-    # Mark as used
+    # Add to database to prevent repeat in future runs
     echo "$FP" >> used_fingerprints.txt
-    echo "Generated unique PIF for $filename"
+    echo "✅ Generated new JSON for $filename"
 done
 
+# Cleanup
+rm -rf temp_zips temp.prop
