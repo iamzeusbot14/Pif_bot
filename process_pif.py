@@ -9,7 +9,7 @@ PIF_DIR = './pif_library'
 DB_FILE = './used_fingerprints.txt'
 SOURCE_REPO = "Pixel-Props/build.prop"
 
-# Target Beta and Development builds specifically
+# Target Beta/Dev builds specifically
 BETA_KEYWORDS = ["beta", "dev", "test-keys", "experimental", "tokay_beta"]
 
 SCHEMA = {
@@ -41,13 +41,11 @@ def run():
         with open(DB_FILE, 'r') as f:
             used_fps = {line.strip() for line in f if line.strip()}
 
-    print("🛰️ Scanning for Certified Beta Properties...")
+    print("🛰️ Scanning for Beta builds with specific SDK levels...")
     api_url = f"https://api.github.com/repos/{SOURCE_REPO}/releases/latest"
     try:
         response = requests.get(api_url).json()
-    except Exception as e:
-        print(f"Connection failed: {e}")
-        return
+    except: return
 
     for asset in response.get('assets', []):
         if not asset['name'].endswith('.zip'): continue
@@ -62,12 +60,12 @@ def run():
                             content_pool += f.read().decode('utf-8', errors='ignore') + "\n"
 
                 fp = extract_value(content_pool, SCHEMA["FINGERPRINT"])
-                
-                # Filter logic: Must contain beta keywords
                 is_beta = any(word in fp.lower() or word in asset['name'].lower() for word in BETA_KEYWORDS)
 
                 if fp and is_beta and fp not in used_fps:
                     api = extract_value(content_pool, SCHEMA["API_LEVEL"])
+                    sdk_val = int(api) if api.isdigit() else 25
+                    
                     pif_data = {
                         "BRAND": extract_value(content_pool, SCHEMA["BRAND"]),
                         "MANUFACTURER": extract_value(content_pool, SCHEMA["MANUFACTURER"]),
@@ -79,8 +77,8 @@ def run():
                         "TYPE": extract_value(content_pool, SCHEMA["TYPE"]) or "user",
                         "TAGS": extract_value(content_pool, SCHEMA["TAGS"]) or "release-keys",
                         "VERSION:SECURITY_PATCH": extract_value(content_pool, SCHEMA["SECURITY_PATCH"]),
-                        "VERSION:API_LEVEL": int(api) if api.isdigit() else 25,
-                        "VERSION:SDK_LEVEL": int(api) if api.isdigit() else 25
+                        "VERSION:API_LEVEL": sdk_val,
+                        "VERSION:SDK_LEVEL": sdk_val # Included as requested
                     }
 
                     file_path = os.path.join(PIF_DIR, asset['name'].replace('.zip', '.json'))
@@ -89,9 +87,8 @@ def run():
                     
                     with open(DB_FILE, 'a') as db:
                         db.write(fp + "\n")
-                    print(f"🔥 Beta PIF Cached: {asset['name']}")
-        except Exception as e:
-            print(f"Skipped {asset['name']}: {e}")
+                    print(f"✅ Beta Found: {asset['name']} (SDK {sdk_val})")
+        except Exception as e: print(f"Error: {e}")
 
 if __name__ == "__main__":
     run()
