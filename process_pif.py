@@ -9,7 +9,7 @@ PIF_DIR = './pif_library'
 DB_FILE = './used_fingerprints.txt'
 SOURCE_REPO = "Pixel-Props/build.prop"
 
-# Target Beta/Dev builds specifically
+# Keywords to prioritize Beta/Dev builds
 BETA_KEYWORDS = ["beta", "dev", "test-keys", "experimental", "tokay_beta"]
 
 SCHEMA = {
@@ -34,19 +34,23 @@ def extract_value(data, patterns):
     return ""
 
 def run():
+    # Ensure directories and database file exist
     if not os.path.exists(PIF_DIR): os.makedirs(PIF_DIR)
-    
-    used_fps = set()
-    if os.path.exists(DB_FILE):
-        with open(DB_FILE, 'r') as f:
-            used_fps = {line.strip() for line in f if line.strip()}
+    if not os.path.exists(DB_FILE): 
+        with open(DB_FILE, 'w') as f: f.write("")
 
-    print("🛰️ Scanning for Beta builds with specific SDK levels...")
+    # Load existing database into memory
+    with open(DB_FILE, 'r') as f:
+        used_fps = {line.strip() for line in f if line.strip()}
+
+    print(f"🛰️ Scanning Google Repo. Known fingerprints: {len(used_fps)}")
+    
     api_url = f"https://api.github.com/repos/{SOURCE_REPO}/releases/latest"
     try:
         response = requests.get(api_url).json()
     except: return
 
+    new_count = 0
     for asset in response.get('assets', []):
         if not asset['name'].endswith('.zip'): continue
         
@@ -78,17 +82,25 @@ def run():
                         "TAGS": extract_value(content_pool, SCHEMA["TAGS"]) or "release-keys",
                         "VERSION:SECURITY_PATCH": extract_value(content_pool, SCHEMA["SECURITY_PATCH"]),
                         "VERSION:API_LEVEL": sdk_val,
-                        "VERSION:SDK_LEVEL": sdk_val # Included as requested
+                        "VERSION:SDK_LEVEL": sdk_val
                     }
 
+                    # Write JSON
                     file_path = os.path.join(PIF_DIR, asset['name'].replace('.zip', '.json'))
                     with open(file_path, 'w') as out:
                         json.dump(pif_data, out, indent=2)
                     
+                    # Update Database File Immediately
                     with open(DB_FILE, 'a') as db:
                         db.write(fp + "\n")
-                    print(f"✅ Beta Found: {asset['name']} (SDK {sdk_val})")
-        except Exception as e: print(f"Error: {e}")
+                    
+                    used_fps.add(fp)
+                    print(f"✅ New Beta Saved: {asset['name']} (SDK {sdk_val})")
+                    new_count += 1
+        except Exception as e:
+            print(f"Error processing {asset['name']}: {e}")
+
+    print(f"🏁 Done. Added {new_count} fingerprints to the database.")
 
 if __name__ == "__main__":
     run()
