@@ -1,0 +1,16 @@
+{
+  "BRAND": "google",
+  "MANUFACTURER": "Google",
+  "MODEL": "Pixel 10 Pro",
+  "PRODUCT": "blazer",
+  "DEVICE": "blazer",
+  "FINGERPRINT": "google/blazer/blazer:15/BP1A.250405.005.B1/13151136:user/release-keys",
+  "ID": "build",
+  "VERSION:SECURITY_PATCH": "",
+  "VERSION:API_LEVEL": 25,
+  "VERSION:SDK_LEVEL": 25,
+  "_zeus_meta": {
+    "sync_date": "2026-04-15",
+    "source": "PixelifyNext-v5.2-BETA-no-VK.zip"
+  }
+}
