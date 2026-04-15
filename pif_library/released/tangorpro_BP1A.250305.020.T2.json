@@ -1,0 +1,18 @@
+{
+  "BRAND": "google",
+  "MANUFACTURER": "Google",
+  "MODEL": "Pixel Tablet",
+  "PRODUCT": "tangorpro",
+  "DEVICE": "tangorpro",
+  "FINGERPRINT": "google/tangorpro/tangorpro:15/BP1A.250305.020.T2/13023825:user/release-keys",
+  "ID": "BP1A.250305.020.T2",
+  "TYPE": "user",
+  "TAGS": "release-keys",
+  "VERSION:SECURITY_PATCH": "2025-03-05",
+  "VERSION:API_LEVEL": 35,
+  "VERSION:SDK_LEVEL": 35,
+  "_zeus_meta": {
+    "sync_date": "2026-04-15",
+    "consistency_check": "pass"
+  }
+}

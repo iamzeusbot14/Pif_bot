@@ -1,0 +1,18 @@
+{
+  "BRAND": "google",
+  "MANUFACTURER": "Google",
+  "MODEL": "Pixel 8 Pro",
+  "PRODUCT": "husky",
+  "DEVICE": "husky",
+  "FINGERPRINT": "google/husky/husky:14/AP2A.240805.005/12025142:user/release-keys",
+  "ID": "AP2A.240805.005",
+  "TYPE": "user",
+  "TAGS": "release-keys",
+  "VERSION:SECURITY_PATCH": "2024-08-05",
+  "VERSION:API_LEVEL": 34,
+  "VERSION:SDK_LEVEL": 34,
+  "_zeus_meta": {
+    "sync_date": "2026-04-15",
+    "consistency_check": "pass"
+  }
+}

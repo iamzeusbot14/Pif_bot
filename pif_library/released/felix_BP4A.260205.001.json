@@ -1,0 +1,18 @@
+{
+  "BRAND": "google",
+  "MANUFACTURER": "Google",
+  "MODEL": "Pixel Fold",
+  "PRODUCT": "felix",
+  "DEVICE": "felix",
+  "FINGERPRINT": "google/felix/felix:16/BP4A.260205.001/14624666:user/release-keys",
+  "ID": "BP4A.260205.001",
+  "TYPE": "user",
+  "TAGS": "release-keys",
+  "VERSION:SECURITY_PATCH": "2026-02-05",
+  "VERSION:API_LEVEL": 36,
+  "VERSION:SDK_LEVEL": 36,
+  "_zeus_meta": {
+    "sync_date": "2026-04-15",
+    "consistency_check": "pass"
+  }
+}

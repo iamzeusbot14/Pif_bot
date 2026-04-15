@@ -1,0 +1,18 @@
+{
+  "BRAND": "google",
+  "MANUFACTURER": "Google",
+  "MODEL": "Pixel 7 Pro",
+  "PRODUCT": "cheetah",
+  "DEVICE": "cheetah",
+  "FINGERPRINT": "google/cheetah/cheetah:13/TQ3A.230805.001.A2/10385117:user/release-keys",
+  "ID": "TQ3A.230805.001.A2",
+  "TYPE": "user",
+  "TAGS": "release-keys",
+  "VERSION:SECURITY_PATCH": "2023-08-05",
+  "VERSION:API_LEVEL": 33,
+  "VERSION:SDK_LEVEL": 33,
+  "_zeus_meta": {
+    "sync_date": "2026-04-15",
+    "consistency_check": "pass"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "BRAND": "google",
+  "MANUFACTURER": "Google",
+  "MODEL": "Pixel 10 Pro",
+  "PRODUCT": "blazer",
+  "DEVICE": "blazer",
+  "FINGERPRINT": "google/blazer/blazer:16/BD3A.250721.001.B7/13955164:user/release-keys",
+  "ID": "BD3A.250721.001.B7",
+  "TYPE": "user",
+  "TAGS": "release-keys",
+  "VERSION:SECURITY_PATCH": "2025-09-05",
+  "VERSION:API_LEVEL": 36,
+  "VERSION:SDK_LEVEL": 36,
+  "_zeus_meta": {
+    "sync_date": "2026-04-15",
+    "consistency_check": "pass"
+  }
+}

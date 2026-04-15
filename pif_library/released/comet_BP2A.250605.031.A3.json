@@ -1,0 +1,18 @@
+{
+  "BRAND": "google",
+  "MANUFACTURER": "Google",
+  "MODEL": "Pixel 9 Pro Fold",
+  "PRODUCT": "comet",
+  "DEVICE": "comet",
+  "FINGERPRINT": "google/comet/comet:16/BP2A.250605.031.A3/13578795:user/release-keys",
+  "ID": "BP2A.250605.031.A3",
+  "TYPE": "user",
+  "TAGS": "release-keys",
+  "VERSION:SECURITY_PATCH": "2025-06-05",
+  "VERSION:API_LEVEL": 36,
+  "VERSION:SDK_LEVEL": 36,
+  "_zeus_meta": {
+    "sync_date": "2026-04-15",
+    "consistency_check": "pass"
+  }
+}
