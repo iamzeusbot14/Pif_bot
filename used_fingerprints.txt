@@ -1,11 +1,1 @@
 
-google/blazer/blazer:16/CP1A.260405.005/15001963:user/release-keys
-google/caiman/caiman:16/CP1A.260405.005/15001963:user/release-keys
-google/cheetah/cheetah:16/CP1A.260405.005/15001963:user/release-keys
-google/comet/comet:16/CP1A.260405.005/15001963:user/release-keys
-google/felix/felix:16/CP1A.260405.005/15001963:user/release-keys
-google/frankel/frankel:16/CP1A.260405.005/15001963:user/release-keys
-google/husky/husky:16/CP1A.260405.005/15001963:user/release-keys
-google/komodo/komodo:16/CP1A.260405.005/15001963:user/release-keys
-google/mustang/mustang:16/CP1A.260405.005/15001963:user/release-keys
-google/tangorpro/tangorpro:16/CP1A.260405.005/15001963:user/release-keys
