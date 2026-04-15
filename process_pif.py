@@ -5,20 +5,17 @@ import zipfile
 import requests
 import concurrent.futures
 from io import BytesIO
+from datetime import datetime
 
-# --- CONFIGURATION ---
+# --- SETTINGS ---
 BASE_PIF_DIR = './pif_library'
 DB_FILE = './used_fingerprints.txt'
-SOURCE_REPO = "Pixel-Props/build.prop"
-
-# Keywords for all devices getting updates + Beta/QPR identifiers
-BETA_KEYWORDS = ["beta", "dev", "test-keys", "qpr", "experimental", "baklava"]
-DEVICE_KEYWORDS = [
-    "tokay", "komodo", "caiman", "comet", # Pixel 9 Series
-    "shiba", "husky", "akita",           # Pixel 8 Series
-    "lynx", "cheetah", "panther",        # Pixel 7 Series
-    "bluejay", "oriole", "raven"          # Pixel 6 Series
+# Multiple high-quality sources for aggregation
+SOURCES = [
+    "Pixel-Props/build.prop",
+    "chiteroman/PlayIntegrityFix"
 ]
+BETA_KEYWORDS = ["beta", "dev", "test-keys", "qpr", "experimental", "baklava", "vanilla"]
 
 SCHEMA = {
     "BRAND": [r"ro\.product\.brand=(.*)"],
@@ -28,8 +25,6 @@ SCHEMA = {
     "DEVICE": [r"ro\.product\.device=(.*)"],
     "FINGERPRINT": [r"ro\.build\.fingerprint=(.*)", r"ro\.system\.build\.fingerprint=(.*)"],
     "ID": [r"ro\.build\.id=(.*)"],
-    "TYPE": [r"ro\.build\.type=(.*)"],
-    "TAGS": [r"ro\.build\.tags=(.*)"],
     "SECURITY_PATCH": [r"ro\.build\.version\.security_patch=(.*)"],
     "API_LEVEL": [r"ro\.build\.version\.sdk=(.*)", r"ro\.product\.first_api_level=(.*)"]
 }
@@ -37,35 +32,43 @@ SCHEMA = {
 def extract_value(data, patterns):
     for pattern in patterns:
         match = re.search(pattern, data)
-        if match:
-            return match.group(1).strip()
+        if match: return match.group(1).strip()
     return ""
 
-def process_asset(asset, used_fps):
-    if not asset['name'].endswith('.zip'): return None
+def get_patch_from_fp(fp):
+    """
+    Intelligent Logic: Extracts the security patch date hidden inside 
+    the fingerprint string (e.g., ...:user/release-keys:2024-03-05/...)
+    """
+    match = re.search(r':(\d{4}-\d{2}-\d{2}):', fp)
+    return match.group(1) if match else None
+
+def process_asset(asset_url, asset_name, used_fps):
     try:
-        r = requests.get(asset['browser_download_url'], timeout=30)
+        r = requests.get(asset_url, timeout=30)
         with zipfile.ZipFile(BytesIO(r.content)) as z:
             content_pool = ""
             for file_name in z.namelist():
-                if 'build.prop' in file_name:
+                if file_name.endswith('.prop'):
                     with z.open(file_name) as f:
                         content_pool += f.read().decode('utf-8', errors='ignore') + "\n"
 
             fp = extract_value(content_pool, SCHEMA["FINGERPRINT"])
             if not fp or fp in used_fps: return None
 
-            api = extract_value(content_pool, SCHEMA["API_LEVEL"])
-            sdk_val = int(api) if api.isdigit() else 25
-            
-            # Determine if Beta or Released
-            is_beta = any(word in fp.lower() or word in asset['name'].lower() for word in BETA_KEYWORDS)
+            # --- INTELLIGENT CONSISTENCY CHECK ---
+            reported_patch = extract_value(content_pool, SCHEMA["SECURITY_PATCH"])
+            fp_patch = get_patch_from_fp(fp)
+            # Use the fingerprint's internal date if they don't match (more reliable)
+            final_patch = fp_patch if fp_patch else reported_patch
+
+            is_beta = any(word in fp.lower() or word in asset_name.lower() for word in BETA_KEYWORDS)
             category = "beta" if is_beta else "released"
             
-            # Use Device and Build ID for a clean filename
+            api = extract_value(content_pool, SCHEMA["API_LEVEL"])
+            sdk_val = int(api) if api.isdigit() else 25
             dev_name = extract_value(content_pool, SCHEMA["DEVICE"]) or "unknown"
             build_id = extract_value(content_pool, SCHEMA["ID"]) or "build"
-            filename = f"{dev_name}_{build_id}.json"
 
             pif_data = {
                 "BRAND": extract_value(content_pool, SCHEMA["BRAND"]),
@@ -75,52 +78,49 @@ def process_asset(asset, used_fps):
                 "DEVICE": dev_name,
                 "FINGERPRINT": fp,
                 "ID": build_id,
-                "TYPE": extract_value(content_pool, SCHEMA["TYPE"]) or "user",
-                "TAGS": extract_value(content_pool, SCHEMA["TAGS"]) or "release-keys",
-                "VERSION:SECURITY_PATCH": extract_value(content_pool, SCHEMA["SECURITY_PATCH"]),
+                "TYPE": "user",
+                "TAGS": "release-keys",
+                "VERSION:SECURITY_PATCH": final_patch,
                 "VERSION:API_LEVEL": sdk_val,
-                "VERSION:SDK_LEVEL": sdk_val
+                "VERSION:SDK_LEVEL": sdk_val,
+                "_zeus_meta": {
+                    "sync_date": datetime.now().strftime('%Y-%m-%d'),
+                    "consistency_check": "fixed" if fp_patch and fp_patch != reported_patch else "pass"
+                }
             }
-            return (fp, category, filename, pif_data)
+            return (fp, category, f"{dev_name}_{build_id}.json", pif_data)
     except: pass
     return None
 
 def run():
-    # Setup Directory Structure
-    for cat in ["beta", "released"]:
-        os.makedirs(os.path.join(BASE_PIF_DIR, cat), exist_ok=True)
-    
+    for cat in ["beta", "released"]: os.makedirs(os.path.join(BASE_PIF_DIR, cat), exist_ok=True)
     if not os.path.exists(DB_FILE): open(DB_FILE, 'w').close()
-    with open(DB_FILE, 'r') as f:
-        used_fps = {line.strip() for line in f if line.strip()}
+    with open(DB_FILE, 'r') as f: used_fps = {line.strip() for line in f if line.strip()}
 
-    print(f"🕵️ Z E U S B O T starting organized crawl. Known: {len(used_fps)}")
-    
     all_assets = []
-    for page in range(1, 11): # Deep history crawl
-        api_url = f"https://api.github.com/repos/{SOURCE_REPO}/releases?per_page=100&page={page}"
-        res = requests.get(api_url).json()
-        if not res or not isinstance(res, list): break
-        for release in res:
-            all_assets.extend(release.get('assets', []))
+    for repo in SOURCES:
+        print(f"🛰️ Z E U S B O T: Querying {repo}...")
+        try:
+            res = requests.get(f"https://api.github.com/repos/{repo}/releases?per_page=50").json()
+            for release in res:
+                for asset in release.get('assets', []):
+                    if asset['name'].endswith('.zip'):
+                        all_assets.append((asset['browser_download_url'], asset['name']))
+        except: continue
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-        results = list(executor.map(lambda a: process_asset(a, used_fps), all_assets))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        results = list(executor.map(lambda a: process_asset(a[0], a[1], used_fps), all_assets))
 
     new_count = 0
     with open(DB_FILE, 'a') as db:
         for res in filter(None, results):
             fp, category, filename, data = res
-            target_path = os.path.join(BASE_PIF_DIR, category, filename)
-            
-            with open(target_path, 'w') as out:
+            with open(os.path.join(BASE_PIF_DIR, category, filename), 'w') as out:
                 json.dump(data, out, indent=2)
-            
             db.write(fp + "\n")
-            print(f"✅ [{category.upper()}] Saved: {filename}")
             new_count += 1
-
-    print(f"🏁 Done. Sorted {new_count} new fingerprints into their folders.")
+    
+    print(f"🏁 Vault Update Complete. Added {new_count} props.")
 
 if __name__ == "__main__":
     run()
