@@ -1,4 +1,4 @@
-name: Z E U S B O T Multi-Source Sync
+name: Z E U S B O T Global Source Sync
 
 on:
   schedule:
@@ -12,7 +12,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -23,19 +23,21 @@ jobs:
       - name: Install Requests
         run: pip install requests
 
-      - name: Run Multi-Source Scraper
+      - name: Sync Sources
         run: python process_pif.py
 
-      - name: Commit Changes
+      - name: Commit to Vault
         run: |
-          git config --local user.email ""zeusbot@atomicmail.io
+          # Professional Bot Identity
+          git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
           
           git add pif_library/ used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            git commit -s -m "chore: aggregated sync from multiple sources [skip ci]"
+            # Signed-off commits for professional log
+            git commit -s -m "chore: global aggregator sync [skip ci]"
             git push
           else
-            echo "No new unique properties found."
+            echo "All sources currently in sync."
           fi
