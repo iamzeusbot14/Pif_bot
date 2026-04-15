@@ -1,8 +1,8 @@
-name: PIF Organized Sync (Z E U S B O T)
+name: Z E U S B O T Multi-Source Sync
 
 on:
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -23,21 +23,19 @@ jobs:
       - name: Install Requests
         run: pip install requests
 
-      - name: Run Organized Scraper
+      - name: Run Multi-Source Scraper
         run: python process_pif.py
 
-      - name: Git Push & Sync
+      - name: Commit Changes
         run: |
-          # Z E U S B O T Professional Config
           git config --local user.email "iamdrzeus14@gmail.com"
           git config --local user.name "Z E U S B O T"
           
-          # Stage the directory and the tracking file
           git add pif_library/ used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            git commit -s -m "chore(pif): organized sync of beta and released properties [skip ci]"
+            git commit -s -m "chore: aggregated sync from multiple sources [skip ci]"
             git push
           else
-            echo "Everything is already sorted and up to date."
+            echo "No new unique properties found."
           fi
