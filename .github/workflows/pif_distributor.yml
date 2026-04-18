@@ -2,7 +2,7 @@ name: Z E U S B O T Global Source Sync
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */3 * * *' # Check every 3 hours for maximum aggressiveness
   workflow_dispatch:
 
 jobs:
@@ -20,24 +20,24 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Requests
+      - name: Install Dependencies
         run: pip install requests
 
-      - name: Sync Sources
+      - name: Execute Ultimate Scraper
         run: python process_pif.py
 
-      - name: Commit to Vault
+      - name: Push to Vault
         run: |
-          # Professional Bot Identity
+          # Bot Identity Configuration
           git config --local user.email "zeusbot@atomicmail.io"
           git config --local user.name "Z E U S B O T"
           
           git add pif_library/ used_fingerprints.txt
           
           if ! git diff --staged --quiet; then
-            # Signed-off commits for professional log
-            git commit -s -m "chore: global aggregator sync [skip ci]"
+            # Signed-off-by Z E U S B O T <zeusbot@atomicmail.io>
+            git commit -s -m "chore: super-aggregator ultimate sync [skip ci]"
             git push
           else
-            echo "All sources currently in sync."
+            echo "No new working PIFs found in this cycle."
           fi
